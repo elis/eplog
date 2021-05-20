@@ -7,9 +7,8 @@ const storage = new LocalStorage(storagePath)
 
 exports.storage = storage
 
+const loasUserSettings = exports.loadUserSettings = () =>
+  JSON.parse(storage.getItem('settings') || '{}')
 
-// const userStorageTask = {
-//   title: 'Prepare user storage',
-//   task: (ctx, task) => new Listr([
-//   ])
-// }
+const saveUserSettings = exports.saveUserSettings = (settings) =>
+  storage.setItem('settings', JSON.stringify(settings))
