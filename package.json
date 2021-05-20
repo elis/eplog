@@ -1,0 +1,38 @@
+{
+  "name": "eplog",
+  "version": "1.0.0",
+  "license": "MIT",
+  "author": {
+    "name": "Eli Sklar",
+    "email": "eli.sklar@gmail.com",
+    "url": "https://github.com/elis"
+  },
+  "description": "Write down notion database rows from cli - use as a simple logging tool",
+  "bin": {
+    "eplog": "./bin/eplog"
+  },
+  "scripts": {
+    "dev": "nodemon -w ./ --exec \"./bin/eplog\""
+  },
+  "repository": "https://github.com/elis/eplog",
+  "dependencies": {
+    "@notionhq/client": "^0.1.3",
+    "ansi-escapes": "^4.3.1",
+    "chalk": "^4.1.0",
+    "cli-table3": "^0.6.0",
+    "commander": "^7.0.0",
+    "listr2": "^3.8.2",
+    "node-localstorage": "^2.1.6",
+    "node-wav-player": "^0.2.0",
+    "term-size": "^2.2.1",
+    "wav-file-info": "^0.0.10"
+  },
+  "devDependencies": {
+    "babel-eslint": "^10.1.0",
+    "eslint": "^7.18.0",
+    "eslint-config-prettier": "^7.2.0",
+    "eslint-plugin-prettier": "^3.3.1",
+    "prettier": "^2.2.1",
+    "prettier-eslint": "^12.0.0"
+  }
+}
