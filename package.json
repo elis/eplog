@@ -1,6 +1,6 @@
 {
   "name": "eplog",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "author": {
     "name": "Eli Sklar",
@@ -9,7 +9,7 @@
   },
   "description": "Write down notion database rows from cli - use as a simple logging tool",
   "bin": {
-    "eplog": "./bin/eplog"
+    "eplog": "bin/eplog"
   },
   "scripts": {
     "run": "./bin/eplog",
