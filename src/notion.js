@@ -1,5 +1,5 @@
-const chalk = require('chalk');
-const { storage } = require('./localstorage');
+const chalk = require('chalk')
+const { storage } = require('./localstorage')
 
 const chaklNotionColor = exports.chaklNotionColor = (color) => ({
   purple: 'magenta',
@@ -8,7 +8,7 @@ const chaklNotionColor = exports.chaklNotionColor = (color) => ({
   orange: 'redBright'
 })[color] || color
 
-const buildPageFromCommander = exports.buildPageFromCommander = (database, title, userOptions, parent) => {
+const buildPageFromCommander = (database, title, userOptions, parent) => {
   const props = Object.entries(database.properties)
   const titleField = props.find(([, prop]) => prop.type === 'title')
 
@@ -17,7 +17,7 @@ const buildPageFromCommander = exports.buildPageFromCommander = (database, title
 
   const properties = fields.map(([name, value]) => {
     const prop = database.properties[name]
-    if (prop.type === 'rich_text')
+    if (prop.type === 'rich_text') {
       return ({
         [name]: {
           rich_text: [
@@ -29,8 +29,9 @@ const buildPageFromCommander = exports.buildPageFromCommander = (database, title
           ]
         }
       })
-    
-    if (prop.type === 'multi_select'){
+    }
+
+    if (prop.type === 'multi_select') {
       return ({
         [name]: {
           multi_select: [
@@ -39,14 +40,17 @@ const buildPageFromCommander = exports.buildPageFromCommander = (database, title
               .map((opt) => ({ name: opt }))
           ]
         }
-      })}
+      })
+    }
+
+    return null
   })
     .filter(e => !!e)
     .reduce((acc, elm) => ({ ...acc, ...elm }), {})
 
   const page = {
     parent: parent || {
-      database_id: database.id,
+      database_id: database.id
     },
     properties: {
       ...properties,
@@ -58,14 +62,15 @@ const buildPageFromCommander = exports.buildPageFromCommander = (database, title
             }
           }
         ]
-      },
+      }
     }
   }
 
   return page
 }
+exports.buildPageFromCommander = buildPageFromCommander
 
-const attachOptionsFromProperties = exports.attachOptionsFromProperties = (program, properties) => {
+const attachOptionsFromProperties = (program, properties) => {
   const fields = Object.entries(properties || {})
     .filter(([, field]) => !'title, created_time, last_edited_time'.split(', ').includes(field.type))
 
@@ -74,53 +79,55 @@ const attachOptionsFromProperties = exports.attachOptionsFromProperties = (progr
       name = name.replace(/[^a-z0-9-_ ]+/ig, '').replace(' ', '-')
       let parser
       let defaults
-      let flags = `--${name} <value>`
-      let description =  `Set the "${name}" field to <value>`
+      const flags = `--${name} <value>`
+      let description = `Set the "${name}" field to <value>`
 
       if (field.type === 'multi_select') {
         parser = (value, prev) => {
-          return [...prev || [], value];
+          return [...prev || [], value]
         }
         const choices = field.multi_select.options
-          .map(({name, color}) => chalk`${color !== 'default' ? chalk`{dim {${chaklNotionColor(color)} ${name}}}` : name}`)
+          .map(({ name, color }) => chalk`${color !== 'default' ? chalk`{dim {${chaklNotionColor(color)} ${name}}}` : name}`)
           .join(', ')
         description = `${description} - (choices: ${choices})`
       }
-      
+
       program.option(flags, description, parser, defaults)
     }
   }
 }
+exports.attachOptionsFromProperties = attachOptionsFromProperties
 
+const loadUserDatabases = () =>
+  JSON.parse(storage.getItem('databases') || '{}')
+exports.loadUserDatabases = loadUserDatabases
 
-const loadUserDatabases = exports.loadUserDatabases = () => {
-  return JSON.parse(storage.getItem('databases') || '{}')
-}
-
-const saveUserDatabases = exports.saveUserDatabases = (databases) => {
+const saveUserDatabases = (databases) =>
   storage.setItem('databases', JSON.stringify(databases))
-}
+exports.saveUserDatabases = saveUserDatabases
 
-const prepareDatabases = exports.prepareDatabases = (databases) =>
+const prepareDatabases = (databases) =>
   (databases).results.map((db) => ({
     ...db,
-    title_text: db.title.reduce((acc, {plain_text}) => `${acc ? acc + ' ' : ''}${plain_text}`, '')
+    title_text: db.title.reduce((acc, { plain_text }) => `${acc ? acc + ' ' : ''}${plain_text}`, '')
   }))
+exports.prepareDatabases = prepareDatabases
 
-const getNotionClient = exports.getNotionClient = (token) => {
-  if (!token)
-    throw new Error('Integration token not provided')
-  
-  const { Client } = require('@notionhq/client');
+const getNotionClient = (token) => {
+  if (!token) throw new Error('Integration token not provided')
+
+  const { Client } = require('@notionhq/client')
 
   return new Client({ auth: token })
 }
+exports.getNotionClient = getNotionClient
 
-const propToText = exports.propToText = (prop) =>
+const propToText = (prop) =>
   prop.type === 'rich_text' || prop.type === 'text' || prop.type === 'title'
     ? prop[prop.type].reduce((acc, rt) => `${acc && acc + ' '}${rt.type === 'text' && rt.text.content}`, '')
     : prop.type === 'created_time'
-    ? prop.created_time
-    : prop.type === 'multi_select'
-    ? prop.multi_select.map(({name}) => name).join(', ')
-    : chalk`Unsupported prop type: {cyan ${prop.type}}`
+      ? prop.created_time
+      : prop.type === 'multi_select'
+        ? prop.multi_select.map(({ name }) => name).join(', ')
+        : chalk`Unsupported prop type: {cyan ${prop.type}}`
+exports.propToText = propToText

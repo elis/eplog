@@ -1,10 +1,12 @@
+const { EplogError, ERRORS } = require('./errors')
 const { saveUserSettings } = require('./localstorage')
-const { prepareDatabases } = require("./notion")
+const { prepareDatabases, getNotionClient, saveUserDatabases } = require('./notion')
 
-const saveUserSettingsTask = exports.saveUserSettingsTask = async (ctx, task) =>
+const saveUserSettingsTask = async (ctx, task) =>
   saveUserSettings(ctx.settings)
+exports.saveUserSettingsTask = saveUserSettingsTask
 
-exports.getAPIKeyTask = async (ctx, task) => {
+const getAPIKeyTask = async (ctx, task) => {
   if (!ctx.settings.profile) {
     ctx.settings.profile = 'default'
     ctx.settings.profiles = {
@@ -28,12 +30,12 @@ exports.getAPIKeyTask = async (ctx, task) => {
     try {
       const client = getNotionClient(res)
       ctx.dbs = await client.databases.list()
-  
+
       ctx.client = client
       ctx.profile.integrationToken = res
       ctx.updateSettings = true
-
     } catch (error) {
+      console.log('What is error?', error)
       throw new Error('Bad token')
     }
   }
@@ -43,41 +45,43 @@ exports.getAPIKeyTask = async (ctx, task) => {
     ctx.client = client
   }
 }
+exports.getAPIKeyTask = getAPIKeyTask
 
-const loadUserDatabasesTask = exports.loadUserDatabasesTask = async (ctx, task) => {
-  const dbs = prepareDatabases(ctx.dbs || await ctx.client.databases.list())
+const loadUserDatabasesTask = async (ctx, task) => {
+  const client = ctx.client || getNotionClient(ctx.profile.integrationToken)
+
+  const dbs = prepareDatabases(ctx.dbs || await client.databases.list())
   // ctx.debug.dbs = dbs
   saveUserDatabases(dbs)
   ctx.databases = dbs
 }
+exports.loadUserDatabasesTask = loadUserDatabasesTask
 
-const setDatabaseTask = exports.setDatabaseTask = async (ctx, task) => {
-
+const setDatabaseTask = async (ctx, task) => {
   const promptDb = async () => {
     const result = await task.prompt({
       type: 'AutoComplete',
       message: 'Select database',
-      choices: ctx.databases.map(({title_text}) => title_text)
+      choices: ctx.databases.map(({ title_text }) => title_text)
     })
 
-    const selected = ctx.databases.find(({title_text}) => title_text === result)
+    const selected = ctx.databases.find(({ title_text }) => title_text === result)
 
     ctx.profile.database = selected.id
     ctx.database = selected
     ctx.updateSettings = true
   }
   if (!ctx.profile.database || ctx.requestDatabase) {
-    if (ctx.databases.length) {
+    if (ctx.databases.length)
       await promptDb()
-    } else {
-      throw new Error('No databases shared with integration. See: https://developers.notion.com/docs/getting-started#share-a-database-with-your-integration')
-    }
+    else
+      throw new EplogError('No databases shared', ERRORS.NO_SHARED_DATABASES)
   }
 
-  const database = ctx.databases.find(({id}) => id === ctx.profile.database)
+  const database = ctx.databases.find(({ id }) => id === ctx.profile.database)
 
-  if (!database) {
+  if (!database)
     await promptDb()
-  }
   else ctx.database = database
 }
+exports.setDatabaseTask = setDatabaseTask

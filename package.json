@@ -12,10 +12,8 @@
     "eplog": "bin/eplog"
   },
   "scripts": {
-    "run": "./bin/eplog",
-    "run-test": "./bin/eplog testing abc xyz 123 098",
-    "dev-test": "yarn run dev testing abc xyz 123 098 -f Description=works -f Tags=hoopla",
-    "dev": "nodemon -w ./ --exec \"./bin/eplog\""
+    "start": "node bin/eplog",
+    "watch": "nodemon -w ./ --exec \"./bin/eplog\""
   },
   "repository": "https://github.com/elis/eplog",
   "dependencies": {
@@ -23,20 +21,17 @@
     "ansi-escapes": "^4.3.1",
     "ascii-table": "^0.0.9",
     "chalk": "^4.1.0",
-    "cli-table3": "^0.6.0",
     "commander": "^7.0.0",
     "listr2": "^3.8.2",
     "node-localstorage": "^2.1.6",
-    "node-wav-player": "^0.2.0",
-    "term-size": "^2.2.1",
-    "wav-file-info": "^0.0.10"
+    "term-size": "^2.2.1"
   },
   "devDependencies": {
-    "babel-eslint": "^10.1.0",
-    "eslint": "^7.18.0",
-    "eslint-config-prettier": "^7.2.0",
-    "eslint-plugin-prettier": "^3.3.1",
-    "prettier": "^2.2.1",
-    "prettier-eslint": "^12.0.0"
+    "eslint": "^7.27.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-config-standard": "^16.0.2",
+    "eslint-plugin-import": "^2.23.3",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^4.3.1"
   }
 }

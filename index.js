@@ -1,4 +1,4 @@
-const { initCLI } = require('./src/cli');
+const { initCLI } = require('./src/cli')
 
 const main = () =>
   initCLI().parse(process.argv)
