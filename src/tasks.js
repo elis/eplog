@@ -24,7 +24,7 @@ const getAPIKeyTask = async (ctx, task) => {
   if (!ctx.profile.integrationToken) {
     task.output = 'No token'
     const res = await task.prompt({
-      type: 'Input',
+      type: 'Password',
       message: 'Your integration token: https://www.notion.so/my-integrations\nEnter Integration Token'
     })
     try {

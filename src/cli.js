@@ -234,7 +234,7 @@ const addAction = async (title, options, ...rest) => {
               return value
             })
 
-          const propsOutput = parsedProps.length ? chalk`\n\n{dim properties (${parsedProps.length} - ${Object.keys(result.properties).join(', ')}):}\n${propsTable.toString()}` : ''
+          const propsOutput = parsedProps.length ? chalk`\n\n{dim properties:}\n${propsTable.toString()}` : ''
           ctx.output = chalk`id: {cyan ${result.id}}\ntime: {cyan ${result.created_time}}${propsOutput}`
         } else
           ctx.output = chalk`id: {cyan ${result.id}}`
