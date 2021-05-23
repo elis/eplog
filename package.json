@@ -22,6 +22,7 @@
     "ascii-table": "^0.0.9",
     "chalk": "^4.1.0",
     "commander": "^7.0.0",
+    "enquirer": "^2.3.6",
     "listr2": "^3.8.2",
     "node-localstorage": "^2.1.6",
     "term-size": "^2.2.1"
