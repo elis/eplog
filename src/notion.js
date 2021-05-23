@@ -87,7 +87,7 @@ const attachOptionsFromProperties = (program, properties) => {
           return [...prev || [], value]
         }
         const choices = field.multi_select.options
-          .map(({ name, color }) => chalk`${color !== 'default' ? chalk`{dim {${chaklNotionColor(color)} ${name}}}` : name}`)
+          .map(({ name, color }) => chalk`${color !== 'default' ? chalk`{${chaklNotionColor(color)} ${name}}` : name}`)
           .join(', ')
         description = `${description} - (choices: ${choices})`
       }

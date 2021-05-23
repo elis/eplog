@@ -10,13 +10,22 @@ const { loadUserDatabases, attachOptionsFromProperties, getNotionClient, buildPa
 const { getAPIKeyTask, setDatabaseTask, loadUserDatabasesTask, saveUserSettingsTask } = require('./tasks')
 const { ERRORS, EplogError } = require('./errors')
 
-const prefix = chalk`{bgBlue {white  ^ }} `
-const docs = chalk`
-You can use the {blue wait:1234} modifier to add a custom delay (in milliseconds) between specific words.
-e.g. {cyan $ vox echo go wait:1200 helium}
-`
+const prefix = chalk`{bgBlue {white  ✎ }} `
 const description = chalk`${prefix}${packageJSON.description}`
 const warning = chalk`${prefix}{bgYellow.black  Alert } No available databases detected.`
+const docs = chalk`\nExample usage:
+{dim # add a new note:}
+$ eplog add My awesome note!
+
+{dim # add note to a different database:}
+$ eplog add -d SomeDatabase Another note
+
+{dim # change default database:}
+$ eplog -u
+
+{dim # reload databases:}
+$ eplog -r
+`
 
 const databases = loadUserDatabases()
 const settings = loadUserSettings()
