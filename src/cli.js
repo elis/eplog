@@ -333,6 +333,9 @@ const listAction = async (terms, options) => {
     return chalk`{dim ${titleName}:} {cyan ${titleProp.title.reduce((acc, el) => `${acc ? acc + ' ' : ''}${el.plain_text}`, '')}} ({dim {blue {underline https://notion.so/${ctx.id.split('-').join('')}}}})`
   }
 
+  const stateMessage = chalk`Listing database items - {dim {cyan ${selectedDB.title_text}}} {dim {green "${terms.join(' ')}"}}`
+  console.log(stateMessage)
+
   const query = async () => {
     const results = await client.databases.query({
       database_id: selectedDB.id,
@@ -356,7 +359,9 @@ const listAction = async (terms, options) => {
 
     const rows = results.results.map(templateRow)
       .reduce((acc, row) => `${acc ? acc + '\n' : ''}${row}`, '')
-    console.log(rows)
+
+    const noResults = chalk`No results.`
+    console.log(rows || noResults)
 
     if (results.has_more) {
       const { Confirm } = require('enquirer')
