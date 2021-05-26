@@ -327,13 +327,14 @@ const listAction = async (terms, options) => {
   const client = getNotionClient(profile.integrationToken)
 
   let cursor
+  let counter = 0
 
   const templateRow = (ctx) => {
     const [titleName, titleProp] = Object.entries(ctx.properties).find(([name, { type }]) => type === 'title') || []
-    return chalk`{dim ${titleName}:} {cyan ${titleProp.title.reduce((acc, el) => `${acc ? acc + ' ' : ''}${el.plain_text}`, '')}} ({dim {blue {underline https://notion.so/${ctx.id.split('-').join('')}}}})`
+    return chalk`{dim [{green ${`${++counter}`.padStart(2, '0')}}]} {dim ${titleName}:} {cyan ${titleProp.title.reduce((acc, el) => `${acc ? acc + ' ' : ''}${el.plain_text}`, '')}} {dim ({blue {underline https://notion.so/${ctx.id.split('-').join('')}}})}`
   }
 
-  const stateMessage = chalk`Listing database items - {dim {cyan ${selectedDB.title_text}}} {dim {green "${terms.join(' ')}"}}`
+  const stateMessage = chalk`Listing database items - {dim {cyan ${selectedDB.title_text}}} ${terms.length > 0 ? chalk`{dim {green "${terms.join(' ')}"}}` : ''}`
   console.log(stateMessage)
 
   const query = async () => {
