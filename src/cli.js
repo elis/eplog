@@ -7,7 +7,7 @@ const packageJSON = require('../package.json')
 
 const { loadUserSettings } = require('./localstorage')
 const { loadUserDatabases, attachOptionsFromProperties, getNotionClient, buildPageFromCommander, propToText } = require('./notion')
-const { getAPIKeyTask, setDatabaseTask, loadUserDatabasesTask, saveUserSettingsTask } = require('./tasks')
+const { getAPIKeyTask, setDatabaseTask, loadUserDatabasesTask, saveUserSettingsTask, addWorkspaceName } = require('./tasks')
 const { ERRORS, EplogError } = require('./errors')
 
 const prefix = chalk`{bgBlue {white  ✎ }} `
@@ -100,6 +100,8 @@ const initCLI = () => {
         // eslint-disable-next-line camelcase
         .choices(databases?.map(({ title_text }) => title_text))
       )
+      .addOption(new program.Option('-w, --workspace [name]', 'Set Notion workspace')
+      )
       .addOption(new program.Option('-r, --reload', 'Reload databases'))
   }
 
@@ -161,6 +163,15 @@ const mainAction = async (options) => {
         newListr([
           { task: getAPIKeyTask },
           { task: loadUserDatabasesTask }
+        ])
+    },
+    {
+      title: 'Set Notion Workspace',
+      enabled: () => options.workspace,
+      task: (ctx, { newListr }) =>
+        newListr([
+          { task: getAPIKeyTask },
+          { task: addWorkspaceName }
         ])
     },
     {

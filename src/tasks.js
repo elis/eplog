@@ -85,3 +85,18 @@ const setDatabaseTask = async (ctx, task) => {
   else ctx.database = database
 }
 exports.setDatabaseTask = setDatabaseTask
+
+const addWorkspaceName = async (ctx, task) => {
+  const promptWorkspaceName = typeof ctx.options.workspace === 'string'
+    ? ctx.options.workspace
+    : await task.prompt({
+      type: 'Input',
+      message: 'Enter workspace name'
+    })
+
+  if (promptWorkspaceName) {
+    ctx.profile.workspace = promptWorkspaceName
+    ctx.updateSettings = true
+  }
+}
+exports.addWorkspaceName = addWorkspaceName
