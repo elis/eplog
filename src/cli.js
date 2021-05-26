@@ -30,6 +30,7 @@ $ eplog -r
 const databases = loadUserDatabases()
 const settings = loadUserSettings()
 const profile = settings?.profiles?.[settings?.profile]
+const database = !!(profile?.database && databases.length) && databases.find(({ id }) => id === profile.database)
 
 const initCLI = () => {
   const context = {}
@@ -50,7 +51,7 @@ const initCLI = () => {
 
   // const listSettingsCommand =
   settingsCommand
-    .command('list', { isDefault: true })
+    .command('list-dbs', { isDefault: true })
     .action(listSettingsAction)
 
   // const getSettingCommand =
@@ -83,6 +84,16 @@ const initCLI = () => {
       .action(addAction)
 
     attachOptionsFromProperties(addCommand, context.database?.properties)
+
+    // const listCommand = 
+    program
+      .command('list [terms...]')
+      .addOption(new program.Option('-a, --amount <number>', 'List number of items').default(12))
+      .addOption(
+        new program.Option('-d, --database <database>', 'Select specific database')
+          .choices(databases?.map(({ title_text }) => title_text))
+      )
+      .action(listAction)
   }
 
   const mainCommand = program
@@ -297,6 +308,60 @@ const listSettingsAction = (options) => {
   Object.entries(listSettings).forEach(([name, value]) =>
     console.log(chalk`${name}: {cyan ${valueMask(name, value)}}`)
   )
+}
+
+const listAction = async (terms, options) => {
+  let selectedDB = database
+
+  if (options.database)
+    selectedDB = databases.find(({ title_text }) => title_text.toLowerCase() === options.database.toLowerCase())
+
+  const client = getNotionClient(profile.integrationToken)
+
+  let cursor
+
+  const templateRow = (ctx) => {
+    const [titleName, titleProp] = Object.entries(ctx.properties).find(([name, { type }]) => type === 'title') || []
+    return chalk`{dim ${titleName}:} {cyan ${titleProp.title.reduce((acc, el) => `${acc ? acc + ' ' : ''}${el.plain_text}`, '')}} ({dim {blue {underline https://notion.so/${ctx.id.split('-').join('')}}}})`
+  }
+
+  const query = async () => {
+    const results = await client.databases.query({
+      database_id: selectedDB.id,
+      page_size: options.amount,
+      ...cursor ? { start_cursor: cursor } : {},
+      ...terms.length
+        ? {
+            filter: {
+              or: [
+                {
+                  property: 'Name',
+                  title: {
+                    contains: terms.join(' ')
+                  }
+                }
+              ]
+            }
+          }
+        : {}
+    })
+
+    const rows = results.results.map(templateRow)
+      .reduce((acc, row) => `${acc ? acc + '\n' : ''}${row}`, '')
+    console.log(rows)
+
+    if (results.has_more) {
+      const { Confirm } = require('enquirer')
+      const confirm = new Confirm({ message: 'Show more items?' })
+      const input = await confirm.run()
+      if (input) {
+        cursor = results.next_cursor
+        query()
+      }
+    }
+  }
+
+  query()
 }
 
 const valueMask = (name, value) =>
