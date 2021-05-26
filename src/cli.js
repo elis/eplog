@@ -74,7 +74,8 @@ const initCLI = () => {
   if (databases.length) {
     const addCommand = program
       .command('add <title...>')
-      .addOption(new program.Option('-l, --list', 'List avialable databases'))
+      .addOption(new program.Option('-l, --list', 'List available databases'))
+      .addOption(new program.Option('-o, --open', 'Open the created document'))
       .addOption(
         new program.Option('-d, --database <database>', 'Select specific database')
           .choices(databases?.map(({ title_text }) => title_text))
@@ -110,7 +111,7 @@ const initCLI = () => {
 exports.initCLI = initCLI
 
 const mainAction = async (options) => {
-  const context = {}
+  const context = { options }
 
   context.databases = loadUserDatabases()
   const settings = context.settings = loadUserSettings()
@@ -219,7 +220,7 @@ const mainAction = async (options) => {
 }
 
 const addAction = async (title, options, ...rest) => {
-  const context = {}
+  const context = { options }
   const databases = context.databases = loadUserDatabases()
   const settings = context.settings = loadUserSettings()
   const profile = context.profile = settings?.profiles?.[settings?.profile]
@@ -240,7 +241,9 @@ const addAction = async (title, options, ...rest) => {
       title: chalk`Save {green "${title}"} to {cyan ${database.title_text}}`,
       task: async (ctx, task) => {
         const result = ctx.result = await client.pages.create(page)
-
+        ctx.url = `https://notion.so/${result.id.split('-').join('')}`
+        const linkOutput = chalk`\n${ctx.url}`
+        const idOutput = chalk`id: {cyan ${result.id}}`
         if (!ctx.profile.compact) {
           const table = new AsciiTable()
           table.addRow('id', result.id)
@@ -255,16 +258,25 @@ const addAction = async (title, options, ...rest) => {
             })
 
           const propsOutput = parsedProps.length ? chalk`\n\n{dim properties:}\n${propsTable.toString()}` : ''
-          ctx.output = chalk`id: {cyan ${result.id}}\ntime: {cyan ${result.created_time}}${propsOutput}`
+          ctx.output = chalk`${idOutput}${linkOutput}\ntime: {cyan ${result.created_time}}${propsOutput}`
         } else
-          ctx.output = chalk`id: {cyan ${result.id}}`
+          ctx.output = chalk`${idOutput}${linkOutput}`
       },
       options: { persistentOutput: true }
+    },
+    {
+      title: 'Open created item...',
+      enabled: (ctx) => !!ctx.options.open,
+      task: async (ctx, task) => {
+        const exec = require('child_process').exec
+        exec('open ' + ctx.url)
+      }
     }
   ], { concurrent: false })
 
   try {
     const result = await tasks.run({
+      ...context,
       profile,
       database
     })
