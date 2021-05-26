@@ -51,7 +51,7 @@ const initCLI = () => {
 
   // const listSettingsCommand =
   settingsCommand
-    .command('list-dbs', { isDefault: true })
+    .command('list', { isDefault: true })
     .action(listSettingsAction)
 
   // const getSettingCommand =
@@ -85,7 +85,7 @@ const initCLI = () => {
 
     attachOptionsFromProperties(addCommand, context.database?.properties)
 
-    // const listCommand = 
+    // const listCommand =
     program
       .command('list [terms...]')
       .addOption(new program.Option('-a, --amount <number>', 'List number of items').default(12))
@@ -127,6 +127,14 @@ const mainAction = async (options) => {
   context.databases = loadUserDatabases()
   const settings = context.settings = loadUserSettings()
   const profile = context.profile = settings?.profiles?.[settings?.profile]
+
+  if (options.list) {
+    const dbs = context.databases.reduce((acc, db) =>
+      chalk`${acc ? acc + '\n' : ''}${db.title_text} {dim ${db.id}}`
+    , '')
+    console.log(dbs)
+    return
+  }
 
   const mainTasks = [
     {
