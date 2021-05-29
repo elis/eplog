@@ -462,19 +462,33 @@ const execAction = async (filename, options, program) => {
   const path = require('path')
   const modulePath = path.resolve(process.env.PWD, filename)
   const fileModule = require(modulePath)
+
   if (!fileModule.init || typeof fileModule.init !== 'function')
     throw new Error('Unable to execute file module - `init` export not found')
 
+  const { constants, promises: fs } = require('fs')
   const dirname = path.dirname(modulePath)
+
   const rcfilePath = path.resolve(dirname, './.eplogrc')
-  const rcAccess = await require('fs').promises.access(rcfilePath, require('fs').promises.R_OK).catch(() => false)
+
+  const rcAccess = await (async () => {
+    try {
+      await fs.access(rcfilePath, constants.R_OK)
+      return true
+    } catch {
+      return false
+    }
+  })()
+
   if (rcAccess) {
     const fileData = await require('fs').promises.readFile(rcfilePath, { encoding: 'utf8' })
     const loadedProfile = require('yaml').parse(fileData)
     context.profile = { ...context.profile, ...loadedProfile }
   }
+
   if (fileModule.profile)
     context.profile = { ...context.profile, ...fileModule.profile }
+
   try {
     if (context.profile.integrationToken) {
       const client = getNotionClient(context.profile.integrationToken)
