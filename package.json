@@ -25,7 +25,8 @@
     "enquirer": "^2.3.6",
     "listr2": "^3.8.2",
     "node-localstorage": "^2.1.6",
-    "term-size": "^2.2.1"
+    "term-size": "^2.2.1",
+    "yaml": "^2.0.0-5"
   },
   "devDependencies": {
     "eslint": "^7.27.0",

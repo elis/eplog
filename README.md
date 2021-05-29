@@ -153,6 +153,127 @@ Run `$ eplog -u [Database Name]` - optionally provide a database name.
 $ eplog -u
 ```
 
+### Listing database entries - Basic search
+
+Run `$ eplog list [keywords]` - optionally provide a keyword to search for.
+
+```bash
+$ eplog list
+Listing database items - Testlog 
+[01] Name: testing tests (https://notion.so/76d0b83813704f56b5f9a1f05d282ca0)
+[02] Name: testing (https://notion.so/6b317cb3af64425d9ff20c05236975cd)
+...
+```
+
+### Executing a javascript file
+
+You can quickly execute a local file and have it communicate with Notion's API via eplog by running `$ eplog exec [filename]`:
+
+```js
+// file notion-test.js
+const yargs = require('yargs/yargs')
+const { hideBin } = require('yargs/helpers')
+// note: yargs needs to be installed relatively to the executed script - e.g. `npm i yargs` in the same directory of the script
+
+exports.init = async (ctx, client) => {
+  const argv = yargs(ctx.args).argv
+  const response = await client.search({
+    query: argv.query || 'test',
+    sort: {
+      direction: 'ascending',
+      timestamp: 'last_edited_time',
+    },
+  });
+
+  console.log('response:', response)
+}
+```
+
+```bash
+$ eplog exec notion-test.js
+response: {
+  object: 'list',
+  results: [
+    {
+      object: 'page',
+      id: 'd2aad83f-9142-4e15-a5bd-5c3665b9584b',
+      created_time: '2021-05-23T02:09:18.446Z',
+      last_edited_time: '2021-05-23T02:09:18.446Z',
+      parent: [Object],
+      archived: false,
+      properties: [Object]
+    },
+    {
+      object: 'page',
+      id: '80357a38-a7d3-23a6-b038-27858191c1d0',
+      created_time: '2021-05-26T22:05:47.055Z',
+      last_edited_time: '2021-05-26T22:06:00.000Z',
+      parent: [Object],
+      archived: false,
+      properties: [Object]
+    }
+  ],
+  next_cursor: null,
+  has_more: false
+}
+```
+
+#### Custom settings
+
+There are two ways to provide the executed script with custom settings;
+
+##### `.eplogrc` file
+
+You can place a [YAML](http://yaml.org/) file named `.eplogrc` in the same directory as the executed script which can be used to provide eplog with a different settings profile than the installed settings profile - allowing you to access different databases and using different integration tokens without changing your global eplog settings.
+
+```yaml
+# file .eplogrc
+integrationToken: secret_...
+
+# Provide a database ID to select a specific database
+# database: 16c4e990-82f4-437f-9fe1-d0a66bbabdaf
+
+# or provide a database name
+databaseName: Journal
+```
+
+##### `exports.profile`
+
+Alternatively the script can export `profile` object containing the configuration object.
+
+
+```js
+// file notion-test.js
+
+exports.profile = {
+  integrationToken: 'secret_...',
+  // database: '16c4e990-82f4-437f-9fe1-d0a66bbabdaf',
+  databaseName: 'Journal'
+}
+
+exports.init = async (ctx, client) => {
+  // `client` is connected to notion using the integration token provided above
+}
+```
+
+#### Passing arguments
+
+To pass arguments to your script simply add `--` before your arguments, e.g.:
+
+```bash
+$ eplog exec notion-test.js -- --query Something
+```
+
+In your script you can access the arguments from the initialize function:
+
+```js
+// file notion-test.js
+exports.init = async (ctx, client) => {
+  console.log('args:', ctx.args)
+  // args: [ '--query', 'Something' ]
+}
+```
+
 ### Compact mode
 
 Set compact mode for a less noisy output:
@@ -161,7 +282,7 @@ Set compact mode for a less noisy output:
 $ eplog settings set compact true
 ```
 
-# Reference
+## Reference
 
 - Notion API: https://developers.notion.com/
 - Notion "My Integrations": https://www.notion.so/my-integrations

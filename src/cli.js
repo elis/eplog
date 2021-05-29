@@ -6,7 +6,7 @@ const AsciiTable = require('ascii-table')
 const packageJSON = require('../package.json')
 
 const { loadUserSettings } = require('./localstorage')
-const { loadUserDatabases, attachOptionsFromProperties, getNotionClient, buildPageFromCommander, propToText } = require('./notion')
+const { loadUserDatabases, attachOptionsFromProperties, getNotionClient, buildPageFromCommander, propToText, prepareDatabases } = require('./notion')
 const { getAPIKeyTask, setDatabaseTask, loadUserDatabasesTask, saveUserSettingsTask, addWorkspaceName } = require('./tasks')
 const { ERRORS, EplogError } = require('./errors')
 
@@ -94,6 +94,14 @@ const initCLI = () => {
           .choices(databases?.map(({ title_text }) => title_text))
       )
       .action(listAction)
+
+    // const execCommand =
+    program.command('exec <filename>')
+      .addOption(
+        new program.Option('-d, --database <database>', 'Select specific database')
+          .choices(databases?.map(({ title_text }) => title_text))
+      )
+      .action(execAction)
   }
 
   const mainCommand = program
@@ -340,7 +348,7 @@ const listAction = async (terms, options) => {
   const query = async () => {
     const results = await client.databases.query({
       database_id: selectedDB.id,
-      page_size: options.amount,
+      page_size: +options.amount,
       ...cursor ? { start_cursor: cursor } : {},
       ...terms.length
         ? {
@@ -438,4 +446,59 @@ const deleteSettingAction = (name, options) => {
     ...context,
     updateSettings: true
   })
+}
+
+const execAction = async (filename, options, program) => {
+  const context = {
+    program,
+    options,
+    profile,
+    databases,
+    database,
+    settings
+  }
+
+  context.args = program.parent?.args?.slice(2)
+  const path = require('path')
+  const modulePath = path.resolve(process.env.PWD, filename)
+  const fileModule = require(modulePath)
+  if (!fileModule.init || typeof fileModule.init !== 'function')
+    throw new Error('Unable to execute file module - `init` export not found')
+
+  const dirname = path.dirname(modulePath)
+  const rcfilePath = path.resolve(dirname, './.eplogrc')
+  const rcAccess = await require('fs').promises.access(rcfilePath, require('fs').promises.R_OK).catch(() => false)
+  if (rcAccess) {
+    const fileData = await require('fs').promises.readFile(rcfilePath, { encoding: 'utf8' })
+    const loadedProfile = require('yaml').parse(fileData)
+    context.profile = { ...context.profile, ...loadedProfile }
+  }
+  if (fileModule.profile)
+    context.profile = { ...context.profile, ...fileModule.profile }
+  try {
+    if (context.profile.integrationToken) {
+      const client = getNotionClient(context.profile.integrationToken)
+      const dbs = await client.databases.list()
+
+      if (!dbs || !dbs.results.length)
+        throw new EplogError('No databases shared with integration', ERRORS.NO_SHARED_DATABASES)
+
+      context.databases = prepareDatabases(dbs)
+      context.database = context.profile.database
+        ? context.databases.find(({ id, title_text }) => id === context.profile.database || title_text === context.profile.databaseName)
+        : false
+
+      return await fileModule.init(context, client)
+    } else
+      throw new EplogError('Missing integration token', ERRORS.MISSING_INTEGRATION_TOKEN)
+  } catch (err) {
+    if (err.code === 'unauthorized')
+      console.log(`Bad integration token - token provided: "${context.profile.integrationToken}"`)
+    else if (err.code && [ERRORS.NO_SHARED_DATABASES, ERRORS.MISSING_INTEGRATION_TOKEN].contains(err.code))
+      console.log(chalk`{bgWhite {red  Error }}: ${err.message}`)
+    else {
+      console.log(chalk`{bgWhite {red  Script Error }}:`)
+      console.error(err)
+    }
+  }
 }
