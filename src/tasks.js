@@ -21,7 +21,7 @@ const getAPIKeyTask = async (ctx, task) => {
 
   ctx.profile = ctx.settings.profiles[ctx.settings.profile]
 
-  if (!ctx.profile.integrationToken) {
+  if (!ctx.profile.integrationToken || ctx.options.init) {
     task.output = 'No token'
     const res = await task.prompt({
       type: 'Password',
@@ -35,7 +35,6 @@ const getAPIKeyTask = async (ctx, task) => {
       ctx.profile.integrationToken = res
       ctx.updateSettings = true
     } catch (error) {
-      console.log('What is error?', error)
       throw new Error('Bad token')
     }
   }
@@ -50,8 +49,7 @@ exports.getAPIKeyTask = getAPIKeyTask
 const loadUserDatabasesTask = async (ctx, task) => {
   const client = ctx.client || getNotionClient(ctx.profile.integrationToken)
 
-  const dbs = prepareDatabases(ctx.dbs || await client.databases.list())
-  // ctx.debug.dbs = dbs
+  const dbs = prepareDatabases(ctx.dbs || await client.search({ filter: { value: 'database', property: 'object' } }))
   saveUserDatabases(dbs)
   ctx.databases = dbs
 }

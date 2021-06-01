@@ -11,6 +11,7 @@ const { getAPIKeyTask, setDatabaseTask, loadUserDatabasesTask, saveUserSettingsT
 const { ERRORS, EplogError } = require('./errors')
 
 const prefix = chalk`{bgBlue {white  ✎ }} `
+const debugPrefix = chalk`${prefix}{bgWhite.blue  DEBUG }`
 const description = chalk`${prefix}${packageJSON.description}`
 const warning = chalk`${prefix}{bgYellow.black  Alert } No available databases detected.`
 const docs = chalk`\nExample usage:
@@ -26,6 +27,8 @@ $ eplog -u
 {dim # reload databases:}
 $ eplog -r
 `
+
+const writeout = (...args) => console.log.apply(console, args)
 
 const databases = loadUserDatabases()
 const settings = loadUserSettings()
@@ -75,7 +78,7 @@ const initCLI = () => {
   if (databases.length) {
     const addCommand = program
       .command('add <title...>')
-      .addOption(new program.Option('-l, --list', 'List available databases'))
+      .addOption(new program.Option('-X, --debug', 'Debug mode').hideHelp())
       .addOption(new program.Option('-o, --open', 'Open the created document'))
       .addOption(
         new program.Option('-d, --database <database>', 'Select specific database')
@@ -111,6 +114,11 @@ const initCLI = () => {
       chalk`${description}${!databases?.length ? '\n' + warning : ''}`
     )
     .addHelpText('after', docs)
+    .addOption(new program.Option('-D, --debug', 'Debug mode').hideHelp())
+    .addOption(new program.Option('-J, --JSON', 'Output debug data as JSON.stringify').hideHelp())
+    .addOption(new program.Option('-r, --reload', 'Reload databases'))
+    .addOption(new program.Option('-i, --init', 'Initialize integration'))
+    .addOption(new program.Option('-w, --workspace [name]', 'Set Notion workspace'))
     .action(mainAction)
 
   if (databases.length) {
@@ -120,9 +128,6 @@ const initCLI = () => {
         // eslint-disable-next-line camelcase
         .choices(databases?.map(({ title_text }) => title_text))
       )
-      .addOption(new program.Option('-w, --workspace [name]', 'Set Notion workspace')
-      )
-      .addOption(new program.Option('-r, --reload', 'Reload databases'))
   }
 
   return program
@@ -140,14 +145,14 @@ const mainAction = async (options) => {
     const dbs = context.databases.reduce((acc, db) =>
       chalk`${acc ? acc + '\n' : ''}${db.title_text} {dim ${db.id}}`
     , '')
-    console.log(dbs)
+    writeout(dbs)
     return
   }
 
   const mainTasks = [
     {
       title: 'Initialize Eplog',
-      enabled: () => !profile || !profile.integrationToken || !profile.database,
+      enabled: () => !profile || !profile.integrationToken || !profile.database || options.init,
       task: async (ctx, task) => {
         return task.newListr([
           {
@@ -164,7 +169,7 @@ const mainAction = async (options) => {
           },
           {
             title: 'Enter API Key',
-            enabled: (ctx) => !ctx.profile?.integrationToken,
+            enabled: (ctx) => !ctx.profile?.integrationToken || !!options.init,
             task: getAPIKeyTask
           },
           {
@@ -178,7 +183,7 @@ const mainAction = async (options) => {
           },
           {
             title: 'Select Default Database',
-            enabled: (ctx) => !ctx.profile?.database,
+            enabled: (ctx) => !ctx.profile?.database || !!options.init,
             task: setDatabaseTask
           }
         ])
@@ -239,14 +244,16 @@ const mainAction = async (options) => {
     await tasks.run(context)
   } catch (error) {
     if (error.code === ERRORS.NO_SHARED_DATABASES)
-      console.log('No databases shared with integration. See: https://developers.notion.com/docs/getting-started#share-a-database-with-your-integration')
+      writeout('No databases shared with integration. See: https://developers.notion.com/docs/getting-started#share-a-database-with-your-integration')
     else if (error.code === ERRORS.USER_CANCELED)
-      console.log('Goodbye. 👋')
-    else console.log('Error with tasks:', error)
+      writeout('Goodbye. 👋')
+    else writeout('Error with tasks:', error)
   }
+  if (options.debug)
+    writeout(debugPrefix, '\n', options.JSON ? JSON.stringify(context, 1, 1) : context)
 }
 
-const addAction = async (title, options, ...rest) => {
+const addAction = async (title, options) => {
   const context = { options }
   const databases = context.databases = loadUserDatabases()
   const settings = context.settings = loadUserSettings()
@@ -261,31 +268,165 @@ const addAction = async (title, options, ...rest) => {
   const client = getNotionClient(context.profile.integrationToken)
 
   title = title.join(' ')
-  const page = buildPageFromCommander(context.database, title, options)
+  const page = buildPageFromCommander(context.database, title, options, client)
+
+  const relations = Object.entries(page.properties).filter(([, { relation }]) => relation?.length > 0 || relation === true)
 
   const tasks = new Listr([
+    {
+      title: 'Resolve relations',
+      enabled: (ctx) => !!relations.length,
+      task: async (ctx, task) => {
+        for (const [relName, value] of relations) {
+          const relDatabaseID = ctx.database.properties[relName].relation.database_id
+          const relDatabase = ctx.databases.find(({ id }) => id === relDatabaseID)
+
+          if (!relDatabase) {
+            const message = chalk`Relation database for {cyan ${relName}} not loaded
+Tip: Share the relation database with the integration explicitly even if the integration has access from related shares.
+`
+            await task.prompt({
+              type: 'confirm',
+              message
+            })
+            throw new EplogError('Relation Database not loaded', EplogError.ERRORS.RELATION_DATABASE_NOT_LOADED)
+          }
+
+          const relTitleField = Object.entries(relDatabase.properties).find(([, { type }]) => type === 'title')?.[0]
+
+          // If no value provided - select from list
+          if (value.relation === true) {
+            const query = {
+              database_id: relDatabaseID
+            }
+            const results = await client.databases.query(query)
+
+            if (results.results.length) {
+              const foundOptions = results.results.map((relOption) => ({
+                name: propToText(relOption.properties[relTitleField]),
+                value: relOption.id
+              }))
+
+              const userChoices = await task.prompt({
+                type: 'MultiSelect',
+                message: chalk`Select {cyan ${relName}}:`,
+                choices: foundOptions,
+                result: function (choices) {
+                  return this.map(choices)
+                }
+              })
+              const newRels = Object.entries(userChoices).map(([, id]) => ({ id }))
+              page.properties[relName] = {
+                relation: newRels
+              }
+            } else {
+              await task.prompt({
+                type: 'confirm',
+                message: chalk`No available relations found - would you like to create one?`
+              })
+            }
+          } else if (value.relation.length) {
+            for (const relationValue of value.relation) {
+              const query = {
+                database_id: relDatabaseID,
+                filter: {
+                  or: [
+                    {
+                      property: relTitleField,
+                      title: {
+                        contains: relationValue
+                      }
+                    }
+                  ]
+                }
+              }
+
+              // Search DB of relation for value
+              const results = await client.databases.query(query)
+
+              // If there are relevant results - pick from a list
+              if (results.results.length) {
+                const foundOptions = results.results.map((relOption) => ({
+                  name: propToText(relOption.properties[relTitleField]),
+                  value: relOption.id
+                }))
+
+                const initial = foundOptions.filter(({ name }) => name === relationValue)
+
+                const userChoices = initial.length === foundOptions.length
+                  ? initial.reduce((acc, { name, value }) => ({ ...acc, [name]: value }), {})
+                  : await task.prompt({
+                    type: 'MultiSelect',
+                    initial,
+                    message: chalk`Select {cyan ${relName}}:`,
+                    choices: foundOptions,
+                    result: function (choices) {
+                      return this.map(choices)
+                    }
+                  })
+
+                const newRels = Object.entries(userChoices).map(([, id]) => ({ id }))
+                page.properties[relName] = {
+                  relation: [
+                    ...page.properties[relName].relation.filter((el) => el !== relationValue),
+                    ...newRels
+                  ]
+                }
+              // eslint-disable-next-line brace-style
+              }
+
+              // Prompt and Create a new relation
+              else {
+                const wantToCreate = await task.prompt({
+                  type: 'Confirm',
+                  initial: true,
+                  message: chalk`No {cyan ${relName}} named "{magenta ${relationValue}}" found - create new one?`
+                })
+                if (wantToCreate) {
+                  const createdRel = await client.pages.create({
+                    parent: {
+                      database_id: relDatabaseID
+                    },
+                    properties: {
+                      [relTitleField]: {
+                        title: [
+                          {
+                            text: {
+                              content: relationValue
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  })
+                  page.properties[relName] = {
+                    relation: page.properties[relName].relation.map((el) => el === relationValue ? { id: createdRel.id } : el)
+                  }
+                }
+              }
+            }
+          }
+          if (options.debug)
+            writeout(chalk`${debugPrefix} Page object:\n`, JSON.stringify(page, 1, 1))
+        }
+      }
+    },
     {
       title: chalk`Save {green "${title}"} to {cyan ${database.title_text}}`,
       task: async (ctx, task) => {
         const result = ctx.result = await client.pages.create(page)
         ctx.url = `https://notion.so/${result.id.split('-').join('')}`
-        const linkOutput = chalk`\n${ctx.url}`
-        const idOutput = chalk`id: {cyan ${result.id}}`
+        const linkOutput = chalk`\n{dim url:} ${ctx.url}`
+        const idOutput = chalk`{dim id:} {cyan ${result.id}}`
+
         if (!ctx.profile.compact) {
-          const table = new AsciiTable()
-          table.addRow('id', result.id)
-          table.addRow('created_time', result.created_time)
+          const displayProps = Object.entries(result.properties)
+            .map(([name, prop]) => [name, prop, propToText(prop)])
+            .filter(([,, text]) => !!text)
+            .reduce((acc, [name, prop, text]) => (acc ? acc + '\n' : '') + chalk`{dim ${name}:} ${text}`, '')
 
-          const propsTable = new AsciiTable()
-          const parsedProps = Object.entries(result.properties)
-            .map(([name, prop]) => {
-              const value = propToText(prop)
-              propsTable.addRow(name, value)
-              return value
-            })
-
-          const propsOutput = parsedProps.length ? chalk`\n\n{dim properties:}\n${propsTable.toString()}` : ''
-          ctx.output = chalk`${idOutput}${linkOutput}\ntime: {cyan ${result.created_time}}${propsOutput}`
+          const propsOutput = displayProps.length ? chalk`\n\n{dim properties}\n${displayProps}` : ''
+          ctx.output = chalk`${idOutput}${linkOutput}\n{dim time:} {cyan ${result.created_time}}${propsOutput}`
         } else
           ctx.output = chalk`${idOutput}${linkOutput}`
       },
@@ -304,25 +445,28 @@ const addAction = async (title, options, ...rest) => {
   try {
     const result = await tasks.run({
       ...context,
+      page,
       profile,
       database
     })
 
     if (result.output)
-      console.log(result.output)
+      writeout(result.output)
   } catch (error) {
     if (error.code === 'validation_error')
-      console.log('Error: ', error.message)
-    else console.log('Error with add task:', error)
+      writeout('Error: ', error.message)
+    else if (error.code === EplogError.ERRORS.RELATION_DATABASE_NOT_LOADED)
+      writeout('Relation database not loaded - run `$ eplog -r` and then try again')
+    else writeout('Error with add task:', error)
   }
 }
 
 const listSettingsAction = (options) => {
-  if (!profile) return console.log('Run the initialization process')
+  if (!profile) return writeout('Run the initialization process')
 
   const { title, ...listSettings } = profile
   Object.entries(listSettings).forEach(([name, value]) =>
-    console.log(chalk`${name}: {cyan ${valueMask(name, value)}}`)
+    writeout(chalk`${name}: {cyan ${valueMask(name, value)}}`)
   )
 }
 
@@ -343,7 +487,7 @@ const listAction = async (terms, options) => {
   }
 
   const stateMessage = chalk`Listing database items - {dim {cyan ${selectedDB.title_text}}} ${terms.length > 0 ? chalk`{dim {green "${terms.join(' ')}"}}` : ''}`
-  console.log(stateMessage)
+  writeout(stateMessage)
 
   const query = async () => {
     const results = await client.databases.query({
@@ -370,7 +514,7 @@ const listAction = async (terms, options) => {
       .reduce((acc, row) => `${acc ? acc + '\n' : ''}${row}`, '')
 
     const noResults = chalk`No results.`
-    console.log(rows || noResults)
+    writeout(rows || noResults)
 
     if (results.has_more) {
       const { Confirm } = require('enquirer')
@@ -392,9 +536,9 @@ const valueMask = (name, value) =>
     : value
 
 const getSettingAction = (name, options) => {
-  if (!profile) return console.log('Run the initialization process')
+  if (!profile) return writeout('Run the initialization process')
 
-  console.log(profile?.[name] || chalk`{dim Undefined}`)
+  writeout(profile?.[name] || chalk`{dim Undefined}`)
 }
 
 const setSettingAction = (name, value, options) => {
@@ -403,7 +547,7 @@ const setSettingAction = (name, value, options) => {
     profile
   }
 
-  if (!profile) return console.log('Run the initialization process')
+  if (!profile) return writeout('Run the initialization process')
 
   const tasks = new Listr([
     {
@@ -430,7 +574,7 @@ const deleteSettingAction = (name, options) => {
   const settings = context.settings = loadUserSettings()
   const profile = context.profile = settings?.profiles?.[settings?.profile]
 
-  if (!profile) return console.log('Run the initialization process')
+  if (!profile) return writeout('Run the initialization process')
 
   const tasks = new Listr([
     {
@@ -507,11 +651,11 @@ const execAction = async (filename, options, program) => {
       throw new EplogError('Missing integration token', ERRORS.MISSING_INTEGRATION_TOKEN)
   } catch (err) {
     if (err.code === 'unauthorized')
-      console.log(`Bad integration token - token provided: "${context.profile.integrationToken}"`)
+      writeout(`Bad integration token - token provided: "${context.profile.integrationToken}"`)
     else if (err.code && [ERRORS.NO_SHARED_DATABASES, ERRORS.MISSING_INTEGRATION_TOKEN].contains(err.code))
-      console.log(chalk`{bgWhite {red  Error }}: ${err.message}`)
+      writeout(chalk`{bgWhite {red  Error }}: ${err.message}`)
     else {
-      console.log(chalk`{bgWhite {red  Script Error }}:`)
+      writeout(chalk`{bgWhite {red  Script Error }}:`)
       console.error(err)
     }
   }

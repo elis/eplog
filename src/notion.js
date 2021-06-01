@@ -8,18 +8,21 @@ const chaklNotionColor = exports.chaklNotionColor = (color) => ({
   orange: 'redBright'
 })[color] || color
 
-const buildPageFromCommander = (database, title, userOptions, parent) => {
+const buildPageFromCommander = (database, title, userOptions, client, parent) => {
   const props = Object.entries(database.properties)
   const titleField = props.find(([, prop]) => prop.type === 'title')
 
+  const safeProps = Object.keys(database.properties)
+    .reduce((acc, name) => ({ ...acc, [sanitizePropertyName(name)]: name }), {})
+
   const fields = Object.entries(userOptions)
-    .filter(([name]) => name in database.properties)
+    .filter(([name]) => name in safeProps)
 
   const properties = fields.map(([name, value]) => {
-    const prop = database.properties[name]
+    const prop = database.properties[safeProps[name]]
     if (prop.type === 'rich_text') {
       return ({
-        [name]: {
+        [safeProps[name]]: {
           rich_text: [
             {
               text: {
@@ -33,7 +36,7 @@ const buildPageFromCommander = (database, title, userOptions, parent) => {
 
     if (prop.type === 'multi_select') {
       return ({
-        [name]: {
+        [safeProps[name]]: {
           multi_select: [
             ...value
               // .map((opt) => prop.multi_select.options.find(({name}) => name === opt))
@@ -43,6 +46,13 @@ const buildPageFromCommander = (database, title, userOptions, parent) => {
       })
     }
 
+    if (prop.type === 'relation') {
+      return ({
+        [safeProps[name]]: {
+          relation: value
+        }
+      })
+    }
     return null
   })
     .filter(e => !!e)
@@ -76,20 +86,22 @@ const attachOptionsFromProperties = (program, properties) => {
 
   if (fields.length) {
     for (let [name, field] of fields) {
-      name = name.replace(/[^a-z0-9-_ ]+/ig, '').replace(' ', '-')
+      name = sanitizePropertyName(name) // name.replace(/[^a-z0-9-_ ]+/ig, '').replace(/^[ ]+/, '').replace(/[ ]+/g, '-')
       let parser
       let defaults
-      const flags = `--${name} <value>`
+      let flags = `--${name} <value>`
       let description = `Set the "${name}" field to <value>`
 
       if (field.type === 'multi_select') {
-        parser = (value, prev) => {
-          return [...prev || [], value]
-        }
+        parser = accumulatorParser
         const choices = field.multi_select.options
           .map(({ name, color }) => chalk`${color !== 'default' ? chalk`{${chaklNotionColor(color)} ${name}}` : name}`)
           .join(', ')
         description = `${description} - (choices: ${choices})`
+      } else if (field.type === 'relation') {
+        parser = accumulatorParser
+        flags = `--${name} [value]`
+        description = `Set ${name} to [value]`
       }
 
       program.option(flags, description, parser, defaults)
@@ -97,6 +109,15 @@ const attachOptionsFromProperties = (program, properties) => {
   }
 }
 exports.attachOptionsFromProperties = attachOptionsFromProperties
+
+const sanitizePropertyName = (name) =>
+  name.replace(/[^a-z0-9]+/ig, '')
+
+exports.sanitizePropertyName = sanitizePropertyName
+
+const accumulatorParser = (value, prev) => {
+  return [...prev || [], value]
+}
 
 const loadUserDatabases = () =>
   JSON.parse(storage.getItem('databases') || '{}')
@@ -125,9 +146,11 @@ exports.getNotionClient = getNotionClient
 const propToText = (prop) =>
   prop.type === 'rich_text' || prop.type === 'text' || prop.type === 'title'
     ? prop[prop.type].reduce((acc, rt) => `${acc && acc + ' '}${rt.type === 'text' && rt.text.content}`, '')
-    : prop.type === 'created_time'
-      ? prop.created_time
-      : prop.type === 'multi_select'
-        ? prop.multi_select.map(({ name }) => name).join(', ')
-        : chalk`Unsupported prop type: {cyan ${prop.type}}`
+    : prop.type === 'created_time' || prop.type === 'last_edited_time'
+      ? prop[prop.type]
+      : prop.type === 'relation'
+        ? prop.relation.map(({ id }) => id).join(', ')
+        : prop.type === 'multi_select'
+          ? prop.multi_select.map(({ name }) => name).join(', ')
+          : chalk`Unsupported prop type: {cyan ${prop.type}}`
 exports.propToText = propToText

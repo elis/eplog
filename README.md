@@ -130,6 +130,35 @@ properties:
 '----------------------------------------------'
 ```
 
+#### Relations
+
+You can associate new entries with relations - any existing relations (which their respective database is `explictly` shared with the integration) checkout the help to see your available relation flags.
+
+For example:
+
+```bash
+$ eplog add This is an example title --Project Demo
+✔ Resolve relations
+✔ Save "This is an example title" to Eplog
+id: 72134b91-b493-447d-b2ef-c23e4b9a2810
+url: https://notion.so/72134b91b493447db2efc23e4b9a2810
+time: 2021-06-01T22:27:30.882Z
+
+properties
+Last Update: 2021-06-01T22:27:30.882Z
+Created: 2021-06-01T22:27:30.882Z
+Project: f31f341e-2831-4e3c-44ab-d0492715b32f
+Name: This is an example title
+```
+
+Note: If you provide a non-existing relation eplog will prompt to create a new one.
+
+Note: You can provide more than a single relation on the same column - simply use the flag again. e.g. `$ eplog add --Project "My Pet Project" --Project "Main Project" Important note!`
+
+Note: If you don't provide a value for the relation flag, eplog will prompt you with a list of existing options.
+
+Note: If you don't see your relation in the `add --help` options try reloading your databases (run `$ eplog -r`), revoke and grant access of *relation database* to the *integration* and reload databases again.
+
 ### Using a different database
 
 If you've shared more than one database with the integration you can occasionally use the `--database <name>` flag (or the shorthand `-d <name>`) when adding a new entry.
