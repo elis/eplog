@@ -143,14 +143,36 @@ const getNotionClient = (token) => {
 }
 exports.getNotionClient = getNotionClient
 
-const propToText = (prop) =>
+const propToText = (prop, markdown) =>
   prop.type === 'rich_text' || prop.type === 'text' || prop.type === 'title'
     ? prop[prop.type].reduce((acc, rt) => `${acc && acc + ' '}${rt.type === 'text' && rt.text.content}`, '')
-    : prop.type === 'created_time' || prop.type === 'last_edited_time'
+    : prop.type === 'number' || prop.type === 'checkbox' || prop.type === 'created_time' || prop.type === 'last_edited_time'
       ? prop[prop.type]
       : prop.type === 'relation'
         ? prop.relation.map(({ id }) => id).join(', ')
-        : prop.type === 'multi_select'
-          ? prop.multi_select.map(({ name }) => name).join(', ')
-          : chalk`Unsupported prop type: {cyan ${prop.type}}`
+        : prop.type === 'date'
+          ? `${prop.date.start}${prop.date.end ? ' - ' + prop.date.end : ''}`
+          : prop.type === 'formula'
+            ? prop.formula[prop.formula.type]
+            : prop.type === 'multi_select'
+              ? prop.multi_select.map(({ name }) => name).join(', ')
+              : chalk`Unsupported prop type: {cyan ${prop.type}}`
 exports.propToText = propToText
+
+const valuefy = (items) =>
+  items.map((item) =>
+    ({
+      ...item,
+      properties:
+      Object.entries(item.properties)
+        .map(([name, prop]) => [name, { ...prop, value: propToText(prop) }])
+        .reduce((acc, [name, prop]) => ({ ...acc, [name]: prop }), {})
+    })
+  )
+    .map((item) => ({
+      ...item,
+      values: Object.entries(item.properties)
+        .reduce((acc, [name, prop]) => ({ ...acc, [name]: prop.value }), {})
+    })
+    )
+exports.valuefy = valuefy
