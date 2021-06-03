@@ -652,7 +652,7 @@ const execAction = async (filename, options, program) => {
   } catch (err) {
     if (err.code === 'unauthorized')
       writeout(`Bad integration token - token provided: "${context.profile.integrationToken}"`)
-    else if (err.code && [ERRORS.NO_SHARED_DATABASES, ERRORS.MISSING_INTEGRATION_TOKEN].contains(err.code))
+    else if (err.code && [ERRORS.NO_SHARED_DATABASES, ERRORS.MISSING_INTEGRATION_TOKEN].indexOf(err.code) >= 0)
       writeout(chalk`{bgWhite {red  Error }}: ${err.message}`)
     else {
       writeout(chalk`{bgWhite {red  Script Error }}:`)

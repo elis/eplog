@@ -32,13 +32,41 @@ Changelog entries are classified using the following labels _(from [keep-a-chang
 
 </details>
 
-## 1.3.0 - 2021-06-02
+## v1.3.1 - 2021-06-03
 
 ### Added
 
-- 🗞 Added a changelog!
-- Better support for properties and flags
-- Added support for relation properties - use `$ eplog add --help` to see your default database relation options
+-   Added  `propToText`  and  `valuefy`  to exports
+
+    You can import  `propToText`  and/or  `valuefy`  form  `eplog`  to help you deal with notion properties and their values.
+
+    `require('eplog').propToText`  - converts a property of a page to a text friendly value of the same property.
+
+    `require('eplog').valuefy`  - add  `value`  to page object properties.
+
+
+-   Added changelog generating script
+
+    The changelog for this project is now created using a script that loads the data from a  [notion.so](http://notion.so)  database, and generates a markdown file named  `CHANGELOG.md` .
+
+    [Read more](/05edef9e1e0c4d86872e87501bf6503f)
+
+    
+
+
+
+
+## v1.3.0 - 2021-06-02
+
+### Added
+
+-   Added a changelog! 🗞
+-   Added support for relation properties
+
+### Fixed
+
+-   Improved support for properties and flags
+
 
 You can now associate new entries with relations - any existing relations (which their respective database is `explicitly` shared with the integration) checkout the help to see your available relation flags.
 
@@ -61,79 +89,146 @@ Name: This is an example title
 
 Note: If you provide a non-existing relation eplog will prompt to create a new one.
 
-Note: You can provide more than a single relation on the same column - simply use the flag again. e.g. `$ eplog add --Project "My Pet Project" --Project "Main Project" Important note!`
+Note: You can provide more than a single relation on the same column - simply use the flag again. e.g.  `$ eplog add --Project "My Pet Project" --Project "Main Project" Important note!`
 
 Note: If you don't provide a value for the relation flag, eplog will prompt you with a list of existing options.
 
-Note: If you don't see your relation in the `add --help` options try reloading your databases (run `$ eplog -r`), revoke and grant access of *relation database* to the *integration* and reload databases again.
+Note: If you don't see your relation in the  `add --help`  options try reloading your databases (run  `$ eplog -r` ), revoke and grant access of  *relation database*  to the  *integration*  and reload databases again.
 
-## 1.2.0 - 2021-05-29
+## v1.2.1 - 2021-05-29
+
+### Fixed
+
+-   Fix  `.eplog`  files not loaded correctly
+
+
+## v1.2.0 - 2021-05-29
 
 ### Added
 
-- Execute `.js` files with eplog
+-   Execute  `.js`  files with eplog
+
 
 You can now execute any javascript file you create.
 
 Example usage:
 
 ```js
+
 // file notion-test.js
 
 // Optionally override any of the profile settings
+
 // your existing settings (integration token and default database) will be used if profile is not exported
+
 exports.profile = {
+
   // provide integration token
+
   integrationToken: 'secret_....',
+
   // provide database ID
+
   database: 'a1e1cdff-72b2-4819-9a10-1078acc2ddc8',
+
   // or use a database name
+
   databaseName: 'Journal'
+
 }
 
-exports.init = async (ctx, client) => {
+exports.init = async ( *ctx* ,  *client* ) => {
+
   /* ctx = {
-      databases, // client.databases.list()
-      profile, // { integrationToken, database }
-      database, // databases.find(({ id }) => ctx.profile.database === id)
-      program, // commander
-      options, // commander options
-      settings, // user settings
-    }
+
+    databases, // client.databases.list()
+
+    profile, // { integrationToken, database }
+
+    database, // databases.find(({ id }) => ctx.profile.database === id)
+
+    program, // commander
+
+    options, // commander options
+
+    settings, // user settings
+
+  }
+
   */
+
   // client = new require('@notionhq/client').Client({ auth: ctx.profile.integrationToken })
+
   // https://developers.notion.com/
 
   const items = await client.search({ query: 'Notion is Awesome!' })
-  
+
   // ...
+
 }
+
+
 ```
+
+
 
 Now execute the script:
 
 ```bash
+
 $ eplog exec notion-test.js
+
 ```
 
-You can provide a custom [YAML](https://yaml.org) configuration file in the same directory as the executed file - eplog will use that to override the default settings.
+You can provide a custom  [YAML](https://yaml.org)  configuration file in the same directory as the executed file - eplog will use that to override the default settings.
 
 ```yaml
+
 # file .eplogrc
+
 integrationToken: secret_...
+
 database: a1e1cdff-72b2-4819-9a10-1078acc2ddc8
+
 # or use database name
+
 # databaseName: Journal
+
 ```
 
-## 1.1.0 - 2021-05-27
+## v1.1.2 - 2021-05-27
+
+-   Minor UI Cleanup
+
+
+## v1.1.1 - 2021-05-27
+
+-   Cleanup
+
+
+## v1.1.0 - 2021-05-27
 
 ### Added
 
-- Page URL is now available when saving
-- Use `$ eplog add -o` to instantly open the new page once create in a new browser windows
-- Use `$ eplog list [search]` for basic listing/searching
+-   Page URL is now available when saving
+-   Use  `$ eplog add -o`  to instantly open the new page once create in a new browser windows
+-   Use  `$ eplog list [search]`  for basic listing/searching
 
-## 1.0.0 - 2021-05-20
 
-First release! 🥳
+## v1.0.3 - 2021-05-23
+
+### Fixed
+
+-   Fixed missing peer dependency
+
+
+## v1.0.2 - 2021-05-23
+
+### Changed
+
+-   Improved README
+
+
+## v1.0.1 - 2021-05-21
+
+First Release! 🥳
