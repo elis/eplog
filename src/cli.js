@@ -2,6 +2,7 @@ const chalk = require('chalk')
 const program = require('commander')
 const { Listr } = require('listr2')
 const AsciiTable = require('ascii-table')
+const fs = require('fs')
 
 const packageJSON = require('../package.json')
 
@@ -77,7 +78,7 @@ const initCLI = () => {
 
   if (databases.length) {
     const addCommand = program
-      .command('add <title...>')
+      .command('add [<title...>]')
       .addOption(new program.Option('-X, --debug', 'Debug mode').hideHelp())
       .addOption(new program.Option('-o, --open', 'Open the created document'))
       .addOption(
@@ -267,7 +268,11 @@ const addAction = async (title, options) => {
 
   const client = getNotionClient(context.profile.integrationToken)
 
-  title = title.join(' ')
+  if (!title || title.length < 1) {
+    title = fs.readFileSync('/dev/stdin').toString().trim()
+  } else {
+    title = title.join(' ')
+  }
   const page = buildPageFromCommander(context.database, title, options, client)
 
   const relations = Object.entries(page.properties).filter(([, { relation }]) => relation?.length > 0 || relation === true)
