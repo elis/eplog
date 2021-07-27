@@ -78,7 +78,7 @@ const initCLI = () => {
 
   if (databases.length) {
     const addCommand = program
-      .command('add [<title...>]')
+      .command('add [title...]')
       .addOption(new program.Option('-X, --debug', 'Debug mode').hideHelp())
       .addOption(new program.Option('-o, --open', 'Open the created document'))
       .addOption(
