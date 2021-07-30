@@ -2,7 +2,9 @@ const { LocalStorage } = require('node-localstorage')
 const path = require('path')
 const packageJSON = require('../package.json')
 
-const homepath = path.join(process.env.HOME, '/', '.' + packageJSON.name)
+const homedir = require('os').homedir()
+
+const homepath = path.join(homedir, '/', '.' + packageJSON.name)
 const storagePath = path.join(homepath, '/storage')
 const storage = new LocalStorage(storagePath)
 

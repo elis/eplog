@@ -32,7 +32,16 @@ Changelog entries are classified using the following labels _(from [keep-a-chang
 
 </details>
 
+## v1.4.2 - 2021-07-30
+
+### Fixed
+
+-   Fix windows homepath error
+
+
 ## v1.4.1 - 2021-07-30
+
+### Fixed
 
 -   Fixed security vulnerability with `normalize-url`
 
