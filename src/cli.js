@@ -1,8 +1,6 @@
 const chalk = require('chalk')
 const program = require('commander')
 const { Listr } = require('listr2')
-const AsciiTable = require('ascii-table')
-const fs = require('fs')
 
 const packageJSON = require('../package.json')
 
@@ -268,11 +266,10 @@ const addAction = async (title, options) => {
 
   const client = getNotionClient(context.profile.integrationToken)
 
-  if (!title || title.length < 1) {
-    title = fs.readFileSync('/dev/stdin').toString().trim()
-  } else {
-    title = title.join(' ')
-  }
+  title = (!title || title.length < 1)
+    ? (await getStdin()).trim()
+    : title.join(' ')
+
   const page = buildPageFromCommander(context.database, title, options, client)
 
   const relations = Object.entries(page.properties).filter(([, { relation }]) => relation?.length > 0 || relation === true)
@@ -664,4 +661,29 @@ const execAction = async (filename, options, program) => {
       console.error(err)
     }
   }
+}
+
+// getStdin based on https://github.com/sindresorhus/get-stdin
+const { stdin } = process
+
+const getStdin = async () => {
+  let result = ''
+  if (stdin.isTTY) return result
+  stdin.setEncoding('utf8')
+  for await (const chunk of stdin) result += chunk
+  return result
+}
+
+getStdin.buffer = async () => {
+  const result = []
+  let length = 0
+
+  if (stdin.isTTY) return Buffer.concat([])
+
+  for await (const chunk of stdin) {
+    result.push(chunk)
+    length += chunk.length
+  }
+
+  return Buffer.concat(result, length)
 }
