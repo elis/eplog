@@ -32,6 +32,17 @@ Changelog entries are classified using the following labels _(from [keep-a-chang
 
 </details>
 
+## v1.4.1 - 2021-07-30
+
+-   Fixed security vulnerability with `normalize-url`
+
+    Bumped  `normalize-url`  from v4.5.0 to v4.5.1
+
+
+
+
+
+
 ## v1.4.0 - 2021-07-30
 
 ### Added

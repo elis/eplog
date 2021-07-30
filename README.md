@@ -1,6 +1,11 @@
 
 # 📕 eplog
 
+<!-- BADGED -->
+
+<span class="badge-npmversion"><a href="https://npmjs.org/package/eplog" title="View this project on NPM"><img src="https://img.shields.io/npm/v/eplog.svg" alt="NPM version" /></a></span>
+<span class="badge-npmdownloads"><a href="https://npmjs.org/package/eplog" title="View this project on NPM"><img src="https://img.shields.io/npm/dm/eplog.svg" alt="NPM downloads" /></a></span>
+
 CLI utility for creating documents in notion.so databases
 
 ![](./assets/images/eplog-demo.gif)
@@ -64,7 +69,7 @@ Options:
 
 Commands:
   settings
-  add [options] <title...>
+  add [options] [title...]
 ```
 ### Adding a new entry
 
@@ -132,6 +137,8 @@ properties:
 
 #### Relations
 
+*Added on: [v1.3.0]()*
+
 You can associate new entries with relations - any existing relations (which their respective database is `explictly` shared with the integration) checkout the help to see your available relation flags.
 
 For example:
@@ -196,6 +203,8 @@ Listing database items - Testlog
 
 ### Executing a javascript file
 
+*Added on: [v1.2.0]()*
+
 You can quickly execute a local file and have it communicate with Notion's API via eplog by running `$ eplog exec [filename]`:
 
 ```js
@@ -245,6 +254,22 @@ response: {
   next_cursor: null,
   has_more: false
 }
+```
+
+### Pipe Title
+
+*Added on: [v1.4.0]()*
+
+You can pipe the title of a new entry using the standard pipe.
+
+Examples:
+
+```bash
+$ echo "The time on `hostname` is `date`" | eplog add
+✔ Save "The time on elimbps is Fri Jul 30 15:13:45 IDT 2021" to Daylog
+...
+
+$ head CHANGELOG.md | eplog add
 ```
 
 #### Custom settings
