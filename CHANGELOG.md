@@ -32,6 +32,23 @@ Changelog entries are classified using the following labels _(from [keep-a-chang
 
 </details>
 
+## v1.4.0 - 2021-07-30
+
+### Added
+
+-   Added support for piping title to `add`
+
+    Thanks to  [Ned McClain](https://github.com/nmcclain) 's  [pull request](https://github.com/elis/eplog/pull/1)  suggestion users can now pipe the  `title`  argument to  `$ eplog add`  command to automate things further.
+
+    Examples:
+
+    `$ echo "The time on `hostname` is `date`" | eplog add`  
+
+    `$ head CHANGELOG.md | eplog add`
+
+
+
+
 ## v1.3.1 - 2021-06-03
 
 ### Added

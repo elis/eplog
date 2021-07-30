@@ -97,7 +97,7 @@ const blocksToMarkdown = (blocks, pad) => {
       return parts.join(' ')
     }
 
-    return `Unsupported block type: "${block.type}`
+    return `Unsupported block type: "${block.type}"`
   })
   output.push(...parsed.map(e => e + '\n'))
 
