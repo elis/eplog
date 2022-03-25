@@ -1,0 +1,43 @@
+{
+  "name": "eplog-script-notionvis",
+  "version": "1.0.0",
+  "description": "",
+  "main": "db-to-vis.js",
+  "scripts": {
+    "start": "eplog exec db-to-vis.js -- --listen",
+    "once": "eplog exec db-to-vis.js",
+    "clean": "rimraf cache/*",
+    "dev": "nodemon -e js --exec \"eplog exec db-to-vis.js -- --listen\"",
+    "docker": "docker-compose up",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Eli Sklar <eli.sklar@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "console-log-to-file": "https://github.com/elis/console-log-to-file",
+    "dotenv": "^16.0.0",
+    "imgur": "^2.1.4",
+    "listr2": "^4.0.5",
+    "node-fetch": "2",
+    "object-hash": "^3.0.0",
+    "pako": "^2.0.4",
+    "simple-node-logger": "https://github.com/elis/simple-node-logger",
+    "yargs": "^17.4.0"
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "^7.17.0",
+    "boxen": "^6.2.1",
+    "eslint": "^7.31.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-config-standard": "^16.0.3",
+    "eslint-plugin-import": "^2.23.4",
+    "eslint-plugin-jest": "^24.7",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^5.1.0",
+    "eslint-plugin-react": "^7.24.0",
+    "eslint-plugin-react-hooks": "^4.2.0",
+    "nodemon": "^2.0.15",
+    "prettier": "^2.5.1",
+    "rimraf": "^3.0.2"
+  }
+}
